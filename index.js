@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
-import { MongoClient, ObjectId} from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 
 // initialized
 const app = express();
@@ -74,6 +74,49 @@ app.get("/allBooks/:id", async (req, res) => {
     res.send(result);
   } catch (error) {
     console.error("Database Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/borrow", async (req, res) => {
+  try {
+    const { bookId, userEmail, title, image, author } = req.body;
+    const existingBorrow = await borrowsCollection.findOne({
+      bookId,
+      userEmail,
+    });
+    if (existingBorrow) {
+      return res.status(400).json({
+        error:
+          "You have already borrowed this book and haven't returned it yet!",
+      });
+    }
+    const book = await allBooks.findOne({ _id: new ObjectId(bookId) });
+    if (!book) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+    const currentQuantity = parseInt(book.quantity || "0", 10);
+    if (currentQuantity <= 0) {
+      return res
+        .status(400)
+        .json({ error: "Sorry, no copies available for borrowing right now." });
+    }
+    await allBooks.updateOne(
+      { _id: new ObjectId(bookId) },
+      { $set: { quantity: (currentQuantity - 1).toString() } },
+    );
+    const borrowRecord = {
+      bookId,
+      userEmail,
+      title,
+      image,
+      author,
+      borrowDate: new Date(),
+    };
+    const result = await borrowsCollection.insertOne(borrowRecord);
+    res.status(200).json({ message: "Book borrowed successfully!", result });
+  } catch (error) {
+    console.error("Borrow Error:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
