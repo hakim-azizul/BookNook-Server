@@ -185,6 +185,24 @@ app.delete("/books/:id", async (req, res) => {
   }
 });
 
+app.patch("/books/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body;
+    const result = await booksCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updatedData },
+    );
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: "Book not found!" });
+    }
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error("Error updating book:", error);
+    res.status(500).json({ success: false, message: "Failed to update book" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
