@@ -51,6 +51,16 @@ app.get("/allBooks", async (req, res) => {
   res.send(books);
 });
 
+app.get("/new-arrivals", async (req, res) => {
+  try {
+    const books = await allBooks.find({}).toArray();
+    const latestBooks = books.reverse().slice(0, 12);
+    res.send(latestBooks);
+  } catch (error) {
+    res.status(500).send({ message: "Failed to fetch new arrivals", error });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
