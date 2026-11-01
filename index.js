@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId} from "mongodb";
 
 // initialized
 const app = express();
@@ -58,6 +58,23 @@ app.get("/new-arrivals", async (req, res) => {
     res.send(latestBooks);
   } catch (error) {
     res.status(500).send({ message: "Failed to fetch new arrivals", error });
+  }
+});
+
+app.get("/allBooks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid book ID format" });
+    }
+    const result = await allBooks.findOne({ _id: new ObjectId(id) });
+    if (!result) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+    res.send(result);
+  } catch (error) {
+    console.error("Database Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
