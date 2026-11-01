@@ -33,7 +33,7 @@ if (!mongoClient) {
 }
 
 const database = mongoClient.db("book-nook");
-const allBooks = database.collection("allBooks");
+const booksCollection = database.collection("allBooks");
 const borrowsCollection = database.collection("borrows");
 
 app.get("/", (req, res) => {
@@ -42,19 +42,19 @@ app.get("/", (req, res) => {
 
 app.post("/add-book", async (req, res) => {
   const newBook = req.body ?? {};
-  const result = await allBooks.insertOne(newBook);
+  const result = await booksCollection.insertOne(newBook);
   res.send({ result });
 });
 
 app.get("/allBooks", async (req, res) => {
-  const cursor = allBooks.find({});
+  const cursor = booksCollection.find({});
   const books = await cursor.toArray();
   res.send(books);
 });
 
 app.get("/new-arrivals", async (req, res) => {
   try {
-    const books = await allBooks.find({}).toArray();
+    const books = await booksCollection.find({}).toArray();
     const latestBooks = books.reverse().slice(0, 12);
     res.send(latestBooks);
   } catch (error) {
@@ -68,7 +68,7 @@ app.get("/allBooks/:id", async (req, res) => {
     if (!ObjectId.isValid(id)) {
       return res.status(400).json({ error: "Invalid book ID format" });
     }
-    const result = await allBooks.findOne({ _id: new ObjectId(id) });
+    const result = await booksCollection.findOne({ _id: new ObjectId(id) });
     if (!result) {
       return res.status(404).json({ error: "Book not found" });
     }
@@ -92,7 +92,7 @@ app.post("/borrow", async (req, res) => {
           "You have already borrowed this book and haven't returned it yet!",
       });
     }
-    const book = await allBooks.findOne({ _id: new ObjectId(bookId) });
+    const book = await booksCollection.findOne({ _id: new ObjectId(bookId) });
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
     }
@@ -102,7 +102,7 @@ app.post("/borrow", async (req, res) => {
         .status(400)
         .json({ error: "Sorry, no copies available for borrowing right now." });
     }
-    await allBooks.updateOne(
+    await booksCollection.updateOne(
       { _id: new ObjectId(bookId) },
       { $set: { quantity: (currentQuantity - 1).toString() } },
     );
@@ -146,12 +146,12 @@ app.delete("/borrows/:id", async (req, res) => {
       return res.status(404).json({ error: "Borrow record not found" });
     }
     await borrowsCollection.deleteOne({ _id: new ObjectId(id) });
-    const book = await allBooks.findOne({
+    const book = await booksCollection.findOne({
       _id: new ObjectId(borrowRecord.bookId),
     });
     if (book) {
       const currentQuantity = parseInt(book.quantity || "0", 10);
-      await allBooks.updateOne(
+      await booksCollection.updateOne(
         { _id: new ObjectId(borrowRecord.bookId) },
         { $set: { quantity: (currentQuantity + 1).toString() } },
       );
@@ -160,6 +160,17 @@ app.delete("/borrows/:id", async (req, res) => {
   } catch (error) {
     console.error("Return Error:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/books/user/:email", async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
+    const query = { contributorEmail: email };
+    const result = await booksCollection.find(query).toArray();
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Failed to fetch user books" });
   }
 });
 
