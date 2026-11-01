@@ -196,6 +196,17 @@ app.patch("/books/:id", async (req, res) => {
     if (result.matchedCount === 0) {
       return res.status(404).json({ message: "Book not found!" });
     }
+    await borrowsCollection.updateMany(
+      { bookId: id }, // অথবা { bookId: new ObjectId(id) } আপনার স্কিমা অনুযায়ী
+      {
+        $set: {
+          image: updatedData.image,
+          title: updatedData.title,
+          author: updatedData.author,
+        },
+      },
+    );
+
     res.json({ success: true, result });
   } catch (error) {
     console.error("Error updating book:", error);
