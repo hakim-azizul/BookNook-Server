@@ -34,6 +34,7 @@ if (!mongoClient) {
 
 const database = mongoClient.db("book-nook");
 const allBooks = database.collection("allBooks");
+const borrowsCollection = database.collection("borrows");
 
 app.get("/", (req, res) => {
   res.send({ msg: "BookNook server is running" });
@@ -117,6 +118,17 @@ app.post("/borrow", async (req, res) => {
     res.status(200).json({ message: "Book borrowed successfully!", result });
   } catch (error) {
     console.error("Borrow Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/borrow/:email", async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
+    const result = await borrowsCollection.find({ userEmail: email }).toArray();
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Fetch Borrows Error:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
