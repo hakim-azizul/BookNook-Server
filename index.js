@@ -133,6 +133,36 @@ app.get("/borrow/:email", async (req, res) => {
   }
 });
 
+app.delete("/borrows/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid record ID" });
+    }
+    const borrowRecord = await borrowsCollection.findOne({
+      _id: new ObjectId(id),
+    });
+    if (!borrowRecord) {
+      return res.status(404).json({ error: "Borrow record not found" });
+    }
+    await borrowsCollection.deleteOne({ _id: new ObjectId(id) });
+    const book = await allBooks.findOne({
+      _id: new ObjectId(borrowRecord.bookId),
+    });
+    if (book) {
+      const currentQuantity = parseInt(book.quantity || "0", 10);
+      await allBooks.updateOne(
+        { _id: new ObjectId(borrowRecord.bookId) },
+        { $set: { quantity: (currentQuantity + 1).toString() } },
+      );
+    }
+    res.status(200).json({ message: "Book returned successfully!" });
+  } catch (error) {
+    console.error("Return Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
