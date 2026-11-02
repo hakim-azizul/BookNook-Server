@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import { MongoClient, ObjectId } from "mongodb";
+import { createRemoteJWKSet, jwtVerify } from "jose";
+
 
 // initialized
 const app = express();
@@ -36,6 +38,31 @@ const database = mongoClient.db("book-nook");
 const booksCollection = database.collection("allBooks");
 const borrowsCollection = database.collection("borrows");
 
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ msg: "Unauthorized!" });
+  }
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ msg: "Unauthorized!" });
+  }
+
+  console.log("Token from verifyToken:", token);
+  const JWKS = createRemoteJWKSet(
+    new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
+  );
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    console.log("Verified Token Payload from verifyToken:", payload);
+    next();
+  } catch (error) {
+    console.error("Token Verification Error from verifyToken:", error);
+    return res.status(500).send({ msg: "Server Error!" });
+  }
+};
+
 app.get("/", (req, res) => {
   res.send({ msg: "BookNook server is running" });
 });
@@ -46,13 +73,13 @@ app.post("/add-book", async (req, res) => {
   res.send({ result });
 });
 
-app.get("/allBooks", async (req, res) => {
+app.get("/allBooks", verifyToken, async (req, res) => {
   const cursor = booksCollection.find({});
   const books = await cursor.toArray();
   res.send(books);
 });
 
-app.get("/new-arrivals", async (req, res) => {
+app.get("/new-arrivals", verifyToken, async (req, res) => {
   try {
     const books = await booksCollection.find({}).toArray();
     const latestBooks = books.reverse().slice(0, 12);
@@ -62,7 +89,7 @@ app.get("/new-arrivals", async (req, res) => {
   }
 });
 
-app.get("/allBooks/:id", async (req, res) => {
+app.get("/allBooks/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     if (!ObjectId.isValid(id)) {
