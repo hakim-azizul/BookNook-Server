@@ -40,6 +40,7 @@ const borrowsCollection = database.collection("borrows");
 
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
+  console.log("Authorization Header from verifyToken:", authHeader);
   if (!authHeader) {
     return res.status(401).send({ msg: "Unauthorized!" });
   }
@@ -67,7 +68,7 @@ app.get("/", (req, res) => {
   res.send({ msg: "BookNook server is running" });
 });
 
-app.post("/add-book", async (req, res) => {
+app.post("/add-book", verifyToken, async (req, res) => {
   const newBook = req.body ?? {};
   const result = await booksCollection.insertOne(newBook);
   res.send({ result });
@@ -106,7 +107,7 @@ app.get("/allBooks/:id", verifyToken, async (req, res) => {
   }
 });
 
-app.post("/borrow", async (req, res) => {
+app.post("/borrow", verifyToken, async (req, res) => {
   try {
     const { bookId, userEmail, title, image, author } = req.body;
     const existingBorrow = await borrowsCollection.findOne({
@@ -149,7 +150,7 @@ app.post("/borrow", async (req, res) => {
   }
 });
 
-app.get("/borrow/:email", async (req, res) => {
+app.get("/borrow/:email", verifyToken, async (req, res) => {
   try {
     const email = decodeURIComponent(req.params.email);
     const result = await borrowsCollection.find({ userEmail: email }).toArray();
@@ -160,7 +161,7 @@ app.get("/borrow/:email", async (req, res) => {
   }
 });
 
-app.delete("/borrows/:id", async (req, res) => {
+app.delete("/borrows/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     if (!ObjectId.isValid(id)) {
@@ -190,7 +191,7 @@ app.delete("/borrows/:id", async (req, res) => {
   }
 });
 
-app.get("/books/user/:email", async (req, res) => {
+app.get("/books/user/:email", verifyToken, async (req, res) => {
   try {
     const email = decodeURIComponent(req.params.email);
     const query = { contributorEmail: email };
@@ -201,7 +202,7 @@ app.get("/books/user/:email", async (req, res) => {
   }
 });
 
-app.delete("/books/:id", async (req, res) => {
+app.delete("/books/:id", verifyToken, async (req, res) => {
   try {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
@@ -212,7 +213,7 @@ app.delete("/books/:id", async (req, res) => {
   }
 });
 
-app.patch("/books/:id", async (req, res) => {
+app.patch("/books/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updatedData = req.body;
