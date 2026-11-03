@@ -74,13 +74,13 @@ app.post("/add-book", verifyToken, async (req, res) => {
   res.send({ result });
 });
 
-app.get("/allBooks", verifyToken, async (req, res) => {
+app.get("/allBooks", async (req, res) => {
   const cursor = booksCollection.find({});
   const books = await cursor.toArray();
   res.send(books);
 });
 
-app.get("/new-arrivals", verifyToken, async (req, res) => {
+app.get("/new-arrivals", async (req, res) => {
   try {
     const books = await booksCollection.find({}).toArray();
     const latestBooks = books.reverse().slice(0, 12);
